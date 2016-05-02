@@ -1,0 +1,42 @@
+apply plugin: 'war'
+apply plugin: "eclipse-wtp"
+apply plugin: 'java'
+
+  eclipse.wtp.facet {
+  facets = []
+    facet name: "jst.java", version:"1.7"
+    facet name: "jst.ejb", version: "3.1"
+}
+
+sourceCompatibility = "1.7"; // for example
+targetCompatibility = "1.7"; // defaults to sourceCompatibility
+
+    repositories {
+       mavenCentral()
+               maven {
+            name = 'Sonatype Nexus Snapshots'
+            url = 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
+            maven { url "http://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/wasdev/maven/repository/" }
+    maven { url "http://repository.opencastproject.org/nexus/content/repositories/public/" }
+    maven { url "http://repo.maven.apache.org/maven2" }
+    maven {
+            name = 'Sonatype Nexus Snapshots'
+            url = 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
+        maven { url='http://repository.apache.org/snapshots'}
+    }
+    
+
+    dependencies {
+        testCompile 'junit:junit:4.8.2'
+        providedCompile 'javax:javaee-api:6.0'
+//      	compile 'org.cloudfoundry:cloudfoundry-runtime:0.8.5'
+      	compile 'commons-io:commons-io:2.4'
+      	compile 'org.apache.commons:commons-lang3:3.4'
+      	compile 'com.io7m.xom:xom:1.2.10'
+      	compile 'org.apache.httpcomponents:httpclient:4.5.1'
+      	compile 'xalan:xalan:2.7.2'
+      	compile 'org.json:json:20151123'
+      	compile 'org.apache.kafka:kafka-clients:0.8.2.1'
+    }
