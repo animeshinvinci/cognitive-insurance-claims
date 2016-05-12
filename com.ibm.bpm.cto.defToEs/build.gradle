@@ -38,5 +38,22 @@ targetCompatibility = "1.7"; // defaults to sourceCompatibility
       	compile 'org.apache.httpcomponents:httpclient:4.5.1'
       	compile 'xalan:xalan:2.7.2'
       	compile 'org.json:json:20151123'
-      	compile 'org.apache.kafka:kafka-clients:0.8.2.1'
+      	compile 'org.apache.kafka:kafka-clients:0.9.0.0'
+      	    compile 'log4j:log4j:1.2.17'
+    compile 'org.slf4j:slf4j-log4j12:1.7.19'
+    compile 'org.slf4j:slf4j-api:1.7.19'
+      	compile 'com.fasterxml.jackson.core:jackson-databind:2.7.2'
+      	compile 'com.fasterxml.jackson.core:jackson-annotations:2.7.2'
+      	compile 'com.fasterxml.jackson.core:jackson-core:2.7.2'
+      	compile fileTree(dir: 'lib-message-hub', include: ['*.jar'])
     }
+    
+    war {
+	    from('src/main/log4j'){
+	    	include '*'
+	    	into "WEB-INF/classes"
+	    }
+	}
+	    
+	    	
+    

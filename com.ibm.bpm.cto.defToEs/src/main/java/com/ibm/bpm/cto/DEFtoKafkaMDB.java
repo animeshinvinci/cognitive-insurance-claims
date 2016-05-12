@@ -53,9 +53,22 @@ public class DEFtoKafkaMDB implements MessageListener {
 		System.out.println("In init");
 		if (kafkaProducer == null) {
 			synchronized (String.class) {
-				kafkaConnectionProps.put("bootstrap.servers", "spbmnext.rtp.raleigh.ibm.com:9092");
+				// These could be externalized into a properties file for more
+				// flexibility.
+				kafkaConnectionProps.put("bootstrap.servers",
+						"kafka01-prod01.messagehub.services.us-south.bluemix.net:9093,kafka02-prod01.messagehub.services.us-south.bluemix.net:9093,kafka03-prod01.messagehub.services.us-south.bluemix.net:9093,kafka04-prod01.messagehub.services.us-south.bluemix.net:9093,kafka05-prod01.messagehub.services.us-south.bluemix.net:9093");
 				kafkaConnectionProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 				kafkaConnectionProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+				kafkaConnectionProps.put("client.id", "deftokafka");
+				kafkaConnectionProps.put("acks", "-1");
+				kafkaConnectionProps.put("security.protocol", "SASL_SSL");
+				kafkaConnectionProps.put("ssl.protocol", "TLSv1.2");
+				kafkaConnectionProps.put("ssl.enabled.protocols", "TLSv1.2");
+				kafkaConnectionProps.put("ssl.truststore.type", "JKS");
+				kafkaConnectionProps.put("ssl.endpoint.identification.algorithm", "HTTPS");
+				kafkaConnectionProps.put("ssl.truststore.location",
+						System.getProperty("java.home") + "/lib/security/cacerts");
+				kafkaConnectionProps.put("ssl.truststore.password", "changeit");
 				kafkaProducer = new KafkaProducer<String, String>(kafkaConnectionProps);
 				System.out.println("BU: connecting to kafka " + this.kafkaConnectionProps);
 			}
