@@ -29,7 +29,8 @@ class KafkaStreamJob extends SparkStreamingJob {
     //Set up connection to the Kafka topic.  In this case we're going to replay all events from Kafka
     //if we restart (auto.offset.reset-> smallest)
     val kakfkaParams = Map[String, String](
-      "metadata.broker.list" -> "spbmnext.rtp.raleigh.ibm.com:9092",
+      "bootstrap.servers" ->
+        "kafka01-prod01.messagehub.services.us-south.bluemix.net:9093,kafka02-prod01.messagehub.services.us-south.bluemix.net:9093,kafka03-prod01.messagehub.services.us-south.bluemix.net:9093,kafka04-prod01.messagehub.services.us-south.bluemix.net:9093,kafka05-prod01.messagehub.services.us-south.bluemix.net:9093",
       "auto.offset.reset" -> "smallest")
     val kafkaTopics = Set("bpmNextMMTopic")
 
@@ -69,8 +70,8 @@ class KafkaStreamJob extends SparkStreamingJob {
           //Convert the RDD into a DataFrame
           val claimDF = claims.toDF()
           //Register the DataFrame as a temporary table.  This lets us run SQL against the data
-//          claimDF.registerTempTable("ClaimCompletes")
-//          claimDF.show
+          //          claimDF.registerTempTable("ClaimCompletes")
+          //          claimDF.show
 
           println("Executing save")
           //Save the data to HDFS, appending this stream's information.  Similar to "Insert into"
