@@ -9,7 +9,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.kafka.KafkaUtils
 
 import com.ibm.bpm.helpers.ClaimComplete
 import com.typesafe.config.Config
@@ -19,11 +18,15 @@ import spark.jobserver.SparkJobInvalid
 import spark.jobserver.SparkJobValid
 import spark.jobserver.SparkJobValidation
 import spark.jobserver.SparkStreamingJob
+import org.apache.kafka.common.serialization.StringDeserializer
+import com.ibm.bpm.cloud.ci.cto.streaming.KafkaStreaming.KafkaStreamingContextAdapter
 
 class KafkaStreamJob extends SparkStreamingJob {
 
   //This is an HDFS file location
   val PARQUET_FILE_CLAIMS = "/data/claims.parquet"
+
+  lazy val kafkaProps = new MessageHubConfig
 
   override def runJob(ssc: StreamingContext, jobConfig: Config): Any = {
     //Set up connection to the Kafka topic.  In this case we're going to replay all events from Kafka
@@ -35,22 +38,31 @@ class KafkaStreamJob extends SparkStreamingJob {
     val kafkaTopics = Set("bpmNextMMTopic")
 
     //Get the stream of events from the Kafka topic
-    val streamOfEvents = KafkaUtils
-      .createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kakfkaParams, kafkaTopics)
-      .map(_._2)
+    //    val streamOfEvents = KafkaUtils
+    //      .createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kakfkaParams, kafkaTopics)
+    //      .map(_._2)
+
+    //New stuff on 6/15/2016
+    //val streamOfEvents = ssc.receiverStream(new KafkaInputDStream())
+    val streamOfEvents = ssc.createKafkaStream[String, String, StringDeserializer, StringDeserializer](kafkaProps, List("bpmNextMMTopic"))
+
+    // end new
     //Now process the events.
-    streamOfEvents.foreachRDD((rdd: RDD[String]) => {
+    streamOfEvents.foreachRDD(rdd => {
       if (rdd.count == 0) {
         //No events sent to kafka in this interval
         println("No events received")
       } else {
+        println("Events received")
+        rdd.foreach(println)
+        val msg = rdd.values
         //Prepare to query Kafka events to filter out the tracking group 
         //information from process navigation events
         val sqlContext = SQLContext.getOrCreate(rdd.sparkContext)
         import sqlContext.implicits._
 
         //Generate the table from the JSON.  This generates a schema we can then use later on.
-        val eventTable = sqlContext.read.json(rdd)
+        val eventTable = sqlContext.read.json(msg)
         try {
           //Here we filter out only those events related to the tracking event LoanAppCompletion.
           val trackedFields = eventTable

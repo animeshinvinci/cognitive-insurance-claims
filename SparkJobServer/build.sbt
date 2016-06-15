@@ -9,7 +9,7 @@ resolvers += "Job Server Bintray" at "https://dl.bintray.com/spark-jobserver/mav
 val ivyLocal = Resolver.file("local", file(Path.userHome.absolutePath + "/.ivy2/local"))
 
 libraryDependencies += "org.apache.spark" %% "spark-core" % "1.6.0" % "provided"
-libraryDependencies += "org.apache.spark" %% "spark-streaming-kafka" % "1.6.0" // % "provided"
+//libraryDependencies += "org.apache.spark" %% "spark-streaming-kafka" % "1.6.0" // % "provided"
 libraryDependencies += "org.apache.spark" %% "spark-streaming" % "1.6.0"  % "provided"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.6.0" % "provided"
 libraryDependencies += "org.apache.spark" %% "spark-yarn" % "1.6.0" % "provided"
@@ -18,6 +18,11 @@ libraryDependencies += "org.apache.spark" %% "spark-mllib" % "1.6.0"% "provided"
 //Add Spark Job Server support
 libraryDependencies += "spark.jobserver" %% "job-server-api" % "0.6.2-SNAPSHOT" % "provided"
 libraryDependencies += "spark.jobserver" %% "job-server-extras" % "0.6.2-SNAPSHOT" % "provided"
+
+//Add Kafka 0.9 Support
+libraryDependencies += "org.apache.kafka" % "kafka-log4j-appender" % "0.9.0.0"
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
+libraryDependencies += "org.apache.kafka" %% "kafka" % "0.9.0.0"
 
 transitiveClassifiers := Seq("sources", "javadoc")
 
