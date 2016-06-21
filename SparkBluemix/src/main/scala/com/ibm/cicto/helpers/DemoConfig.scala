@@ -1,4 +1,4 @@
-package com.ibm.bpm.cloud.ci.cto.streaming
+package com.ibm.cicto.helpers
 
 import org.apache.kafka.clients.CommonClientConfigs
 import java.io.FileInputStream
@@ -16,13 +16,13 @@ class DemoConfig extends Serializable {
 
   //Hold configuration key/value pairs
   var config = scala.collection.mutable.Map[String, String](registerConfigKey("tweets.key", ""),
-    registerConfigKey("name", "cognitiveclaim"),
+    registerConfigKey("name", "spark"),
     registerConfigKey("auth_url", "https://identity.open.softlayer.com"),
     registerConfigKey("project_id", "5b9d6598c966484baaf8ae45ef9a9bcf"),
     registerConfigKey("region", "dallas"),
     registerConfigKey("user_id", "185edd37c1434a5ab12c8e3b3f9a7aa6"),
-    registerConfigKey("password", "GkWtD4GM^).60.qr") //,registerConfigKey("checkpointDir", "swift://notebooks.spark/ssc")
-    )
+    registerConfigKey("password", "GkWtD4GM^).60.qr"),
+    registerConfigKey("checkpointDir", "swift://ClaimContainer.spark/ssc"))
 
   private def getKeyOrFail(key: String): String = {
     config.get(key).getOrElse({
@@ -39,7 +39,8 @@ class DemoConfig extends Serializable {
   def set_hadoop_config(sc: SparkContext) {
     val prefix = "fs.swift.service." + getKeyOrFail("name")
     val hconf = sc.hadoopConfiguration
-    hconf.set(prefix + ".auth.url", getKeyOrFail("auth_url") + "/v2.0/tokens")
+    //the v2 urls used in all referenced docs are lies... dirty lies.
+    hconf.set(prefix + ".auth.url", getKeyOrFail("auth_url") + "/v3/auth/tokens")
     hconf.set(prefix + ".auth.endpoint.prefix", "endpoints")
     hconf.set(prefix + ".tenant", getKeyOrFail("project_id"))
     hconf.set(prefix + ".username", getKeyOrFail("user_id"))
@@ -47,6 +48,7 @@ class DemoConfig extends Serializable {
     hconf.setInt(prefix + ".http.port", 8080)
     hconf.set(prefix + ".region", getKeyOrFail("region"))
     hconf.setBoolean(prefix + ".public", true)
+    println("BU " + prefix + ".auth.url: " + sc.hadoopConfiguration.get(prefix + ".auth.url"))
   }
 
   def initConfigKeys() {

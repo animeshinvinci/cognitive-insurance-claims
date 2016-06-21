@@ -36,6 +36,8 @@ class KafkaStreamJob extends SparkStreamingJob {
         "kafka01-prod01.messagehub.services.us-south.bluemix.net:9093,kafka02-prod01.messagehub.services.us-south.bluemix.net:9093,kafka03-prod01.messagehub.services.us-south.bluemix.net:9093,kafka04-prod01.messagehub.services.us-south.bluemix.net:9093,kafka05-prod01.messagehub.services.us-south.bluemix.net:9093",
       "auto.offset.reset" -> "smallest")
     val kafkaTopics = Set("bpmNextMMTopic")
+    println("Setting up Swift and Object Storage")
+    kafkaProps.set_hadoop_config(ssc.sparkContext)
 
     //Get the stream of events from the Kafka topic
     //    val streamOfEvents = KafkaUtils
@@ -54,8 +56,8 @@ class KafkaStreamJob extends SparkStreamingJob {
         println("No events received")
       } else {
         println("Events received")
-        rdd.foreach(println)
         val msg = rdd.values
+        msg.foreach(println)
         //Prepare to query Kafka events to filter out the tracking group 
         //information from process navigation events
         val sqlContext = SQLContext.getOrCreate(rdd.sparkContext)
@@ -87,8 +89,12 @@ class KafkaStreamJob extends SparkStreamingJob {
 
           println("Executing save")
           //Save the data to HDFS, appending this stream's information.  Similar to "Insert into"
-          claimDF.save(PARQUET_FILE_CLAIMS, SaveMode.Append)
-          println("Events saved in HDFS")
+          //claimDF.save(PARQUET_FILE_CLAIMS, SaveMode.Append)
+
+          //Save to ObjectStorage
+          claimDF.write.mode(SaveMode.Append).save("swift://ClaimContainer.myacct/claims.parquet")
+          //claimDF.save("swift://ClaimContainer.myacct/claims.parquet", SaveMode.Append)
+          println("Events saved in ObjectStorage")
 
         } catch { case e: org.apache.spark.sql.AnalysisException => /* column does not exist in a given event. noop */ }
       }

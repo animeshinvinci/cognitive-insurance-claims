@@ -1,11 +1,10 @@
-name := "SparkJobServer"
+name := "MessageHub_Spark_Bluemix"
 version := "1.0"
 scalaVersion := "2.10.6"
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 resolvers += "Restlet" at "http://maven.restlet.com"
 resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
-resolvers += "Job Server Bintray" at "https://dl.bintray.com/spark-jobserver/maven"
 val ivyLocal = Resolver.file("local", file(Path.userHome.absolutePath + "/.ivy2/local"))
 
 //Here are the Spark Dependencies
@@ -16,9 +15,6 @@ libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.6.0" % "provided"
 libraryDependencies += "org.apache.spark" %% "spark-yarn" % "1.6.0" % "provided"
 libraryDependencies += "org.apache.spark" %% "spark-mllib" % "1.6.0"% "provided"
 
-//Add Spark Job Server support
-libraryDependencies += "spark.jobserver" %% "job-server-api" % "0.6.2-SNAPSHOT" % "provided"
-libraryDependencies += "spark.jobserver" %% "job-server-extras" % "0.6.2-SNAPSHOT" % "provided"
 
 //Add Kafka 0.9 Support
 libraryDependencies += "org.apache.kafka" % "kafka-log4j-appender" % "0.9.0.0"
@@ -26,9 +22,7 @@ libraryDependencies += "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
 libraryDependencies += "org.apache.kafka" %% "kafka" % "0.9.0.0"
 
 //Add Object Storage/Swift Support
-libraryDependencies += "org.apache.hadoop" % "hadoop-openstack" % "2.3.0"
-//Should try this one, too.
-//libraryDependencies += "com.ibm.stocator" % "stocator" % "1.0.1"
+libraryDependencies += "org.apache.hadoop" % "hadoop-openstack" % "2.6.0" % "provided"
 
 
 transitiveClassifiers := Seq("sources", "javadoc")
