@@ -39,7 +39,8 @@ class DemoConfig extends Serializable {
   def set_hadoop_config(sc: SparkContext) {
     val prefix = "fs.swift.service." + getKeyOrFail("name")
     val hconf = sc.hadoopConfiguration
-    //the v2 urls used in all referenced docs are lies... dirty lies.
+    //the v2 urls used in all referenced docs are lies... damned lies.
+    //See https://developer.ibm.com/answers/answers/270672/view.html
     hconf.set(prefix + ".auth.url", getKeyOrFail("auth_url") + "/v3/auth/tokens")
     hconf.set(prefix + ".auth.endpoint.prefix", "endpoints")
     hconf.set(prefix + ".tenant", getKeyOrFail("project_id"))
