@@ -22,7 +22,7 @@ class DemoConfig extends Serializable {
     registerConfigKey("region", "dallas"),
     registerConfigKey("user_id", "185edd37c1434a5ab12c8e3b3f9a7aa6"),
     registerConfigKey("password", "GkWtD4GM^).60.qr"),
-    registerConfigKey("checkpointDir", "swift://ClaimContainer.spark/ssc"))
+    registerConfigKey("checkpointDir", "swift://CogClaim.spark/ssc"))
 
   private def getKeyOrFail(key: String): String = {
     config.get(key).getOrElse({
@@ -39,9 +39,11 @@ class DemoConfig extends Serializable {
   def set_hadoop_config(sc: SparkContext) {
     val prefix = "fs.swift.service." + getKeyOrFail("name")
     val hconf = sc.hadoopConfiguration
+    hconf.set("fs.swift2d.impl", "com.ibm.stocator.fs.ObjectStoreFileSystem")
     //the v2 urls used in all referenced docs are lies... damned lies.
     //See https://developer.ibm.com/answers/answers/270672/view.html
     hconf.set(prefix + ".auth.url", getKeyOrFail("auth_url") + "/v3/auth/tokens")
+    hconf.set(prefix + ".auth.method", "keystoneV3")
     hconf.set(prefix + ".auth.endpoint.prefix", "endpoints")
     hconf.set(prefix + ".tenant", getKeyOrFail("project_id"))
     hconf.set(prefix + ".username", getKeyOrFail("user_id"))
@@ -49,6 +51,7 @@ class DemoConfig extends Serializable {
     hconf.setInt(prefix + ".http.port", 8080)
     hconf.set(prefix + ".region", getKeyOrFail("region"))
     hconf.setBoolean(prefix + ".public", true)
+    println("BU fs.swift2d.impl "+hconf.get("fs.swift2d.impl"))
     println("BU " + prefix + ".auth.url: " + sc.hadoopConfiguration.get(prefix + ".auth.url"))
   }
 

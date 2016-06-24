@@ -10,7 +10,6 @@ import scala.reflect.ClassTag
 import scala.reflect.classTag
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.SparkConf
-import kafka.serializer.StringDecoder
 import com.ibm.cicto.helpers.MessageHubConfig
 import com.ibm.cicto.helpers.KafkaStreaming.KafkaStreamingContextAdapter
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -32,12 +31,13 @@ object MHBXSparkStreamingJob {
   val PARQUET_FILE_LOANAPPS = "/data/loanapp.parquet"
 
   lazy val kafkaProps = new MessageHubConfig
-  var conf = new SparkConf
+  val conf = new SparkConf().setAppName("Cognitive Claims Streaming Job")
+  val sc = SparkContext.getOrCreate(conf)
 
   def main(args: Array[String]) {
-    conf = new SparkConf().setAppName("Cognitive Claims Streaming Job")
-    val sc = SparkContext.getOrCreate(conf)
+    println("Setting Hadoop/Swift config")
     kafkaProps.set_hadoop_config(sc)
+    println("Hadoop/Swift config set")
     //Create streaming context using a checkpoint directory so we can restart at the correct spot
     //in case of failure.  This also sets up the batch size.  In this case we are doing batches every
     //5 seconds.
@@ -47,7 +47,7 @@ object MHBXSparkStreamingJob {
     }
     //println("BU " + "tenant is: " + sc.hadoopConfiguration.get("fs.swift.service.spark" + ".tenant"))
     println("BU here is the checkpoint dir " + kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY))
-    val ssc = createStreamingContext(sc)
+    val ssc = StreamingContext.getOrCreate((kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY)), createStreamingContext)
     //val ssc = StreamingContext.getOrCreate(kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY), createContext _)
 
     //Set up connection to the Kafka topic.  In this case we're going to replay all events from Kafka
@@ -101,7 +101,7 @@ object MHBXSparkStreamingJob {
           //claimDF.save(PARQUET_FILE_CLAIMS, SaveMode.Append)
 
           //Save to ObjectStorage
-          claimDF.write.mode(SaveMode.Append).save("swift://ClaimContainer.spark/claims.parquet")
+          claimDF.write.mode(SaveMode.Append).save("swift://CogClaim.spark/claims.parquet")
           println("Events saved in ObjectStorage")
         } catch { case e: org.apache.spark.sql.AnalysisException => /* column does not exist in a given event. noop */ }
       }
@@ -111,11 +111,9 @@ object MHBXSparkStreamingJob {
   }
 
   // Function to create and setup a new StreamingContext
-  def createStreamingContext(sc: SparkContext): StreamingContext = {
-    println(sc.hadoopConfiguration.get("fs.swift.service.spark.tenant"))
-    println("Setting up Swift and Object Storage")
+  def createStreamingContext(): StreamingContext = {
+    println("creating new streamingcontext")
     val ssc = new StreamingContext(sc, Seconds(10))
-    println(ssc.sparkContext.hadoopConfiguration.get("fs.swift.service.spark.tenant"))
     ssc.checkpoint(kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY)) // set checkpoint directory for recovery
     ssc
   }

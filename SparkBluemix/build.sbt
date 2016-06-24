@@ -17,13 +17,13 @@ libraryDependencies += "org.apache.spark" %% "spark-mllib" % "1.6.0"% "provided"
 
 
 //Add Kafka 0.9 Support
-libraryDependencies += "org.apache.kafka" % "kafka-log4j-appender" % "0.9.0.0"
+//libraryDependencies += "org.apache.kafka" % "kafka-log4j-appender" % "0.9.0.0"
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
-libraryDependencies += "org.apache.kafka" %% "kafka" % "0.9.0.0"
+//libraryDependencies += "org.apache.kafka" %% "kafka" % "0.9.0.0"
 
 //Add Object Storage/Swift Support
 libraryDependencies += "org.apache.hadoop" % "hadoop-openstack" % "2.6.0" % "provided"
-
+libraryDependencies += "com.ibm.stocator" % "stocator" % "1.0.3"
 
 transitiveClassifiers := Seq("sources", "javadoc")
 
@@ -31,12 +31,9 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-yarn" % "1.6.0" % "provided" excludeAll ExclusionRule(organization = "org.apache.hadoop"),
   "org.apache.hadoop" % "hadoop-client" % "2.4.0" % "provided",
   "org.apache.hadoop" % "hadoop-yarn-client" % "2.4.0" % "provided",
-  "org.apache.hadoop" % "hadoop-hdfs" % "2.4.0" % "provided",
-  "org.scalaz"                  %% "scalaz-core"                 % "7.1.3",
-  "org.scalaz"                  %% "scalaz-effect"               % "7.1.3"
-  
+  "org.apache.hadoop" % "hadoop-hdfs" % "2.4.0" % "provided"  
 )
-
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
 mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
   {
     case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last

@@ -1,10 +1,10 @@
 {
 	"credentials": {
-		"tenant_id": "s854-e8895052af07ee-0e2f0529ff32",
-		"tenant_id_full": "9484a0c0-af44-44ba-a854-e8895052af07_5c884a3b-5a36-49b5-afee-0e2f0529ff32",
+		"tenant_id": "s679-bc9d628692a8ee-0e2f0529ff32",
+		"tenant_id_full": "f16098fa-1dfc-411d-b679-bc9d628692a8_5c884a3b-5a36-49b5-afee-0e2f0529ff32",
 		"cluster_master_url": "https://169.54.219.20:8443",
-		"instance_id": "9484a0c0-af44-44ba-a854-e8895052af07",
-		"tenant_secret": "0052c533-b2f7-43a5-9ee3-5255782c582c",
+		"instance_id": "f16098fa-1dfc-411d-b679-bc9d628692a8",
+		"tenant_secret": "90b0f210-5980-4c01-9299-d5899e68e0d8",
 		"plan": "ibm.SparkService.PayGoPersonal"
 	}
 }

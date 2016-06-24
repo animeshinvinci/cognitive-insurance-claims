@@ -3,7 +3,6 @@ package com.ibm.cicto.spark
 import org.apache.spark.streaming.Seconds
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.SparkConf
-import kafka.serializer.StringDecoder
 import com.ibm.cicto.helpers.MessageHubConfig
 import com.ibm.cicto.helpers.KafkaStreaming.KafkaStreamingContextAdapter
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -36,7 +35,7 @@ object Sample {
     import sqlContext.implicits._
     println("Bu: once again here is the config " + sc.hadoopConfiguration.get("fs.swift.service.spark.auth.url"))
     println("getting claims")
-    val events = sqlContext.read.parquet("swift://ClaimContainer.spark/claims.parquet").cache()
+    val events = sqlContext.read.parquet("swift://CogClaim.spark/claims.parquet").cache()
     println(events.count())
   }
 }
