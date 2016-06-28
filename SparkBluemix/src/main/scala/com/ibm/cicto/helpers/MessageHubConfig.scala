@@ -39,7 +39,7 @@ class MessageHubConfig extends DemoConfig {
       registerConfigKey(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "HTTPS"),
       registerConfigKey(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL"),
 
-      registerConfigKey(MessageHubConfig.CHECKPOINT_DIR_KEY, "swift://CogClaim.spark/ssc"),
+      registerConfigKey(MessageHubConfig.CHECKPOINT_DIR_KEY, "swift2d://CogClaim.keystone/ssc"),
       registerConfigKey(MessageHubConfig.KAFKA_TOPIC_TWEETS, "bpmNextMMTopic"),
       registerConfigKey(MessageHubConfig.KAFKA_USER_NAME),
       registerConfigKey(MessageHubConfig.KAFKA_USER_PASSWORD),

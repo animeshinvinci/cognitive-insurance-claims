@@ -16,13 +16,13 @@ class DemoConfig extends Serializable {
 
   //Hold configuration key/value pairs
   var config = scala.collection.mutable.Map[String, String](registerConfigKey("tweets.key", ""),
-    registerConfigKey("name", "spark"),
+    registerConfigKey("name", "keystone"),
     registerConfigKey("auth_url", "https://identity.open.softlayer.com"),
     registerConfigKey("project_id", "5b9d6598c966484baaf8ae45ef9a9bcf"),
     registerConfigKey("region", "dallas"),
     registerConfigKey("user_id", "185edd37c1434a5ab12c8e3b3f9a7aa6"),
     registerConfigKey("password", "GkWtD4GM^).60.qr"),
-    registerConfigKey("checkpointDir", "swift://CogClaim.spark/ssc"))
+    registerConfigKey("checkpointDir", "swift2d://CogClaim.keystone/ssc"))
 
   private def getKeyOrFail(key: String): String = {
     config.get(key).getOrElse({
@@ -37,7 +37,7 @@ class DemoConfig extends Serializable {
   }
 
   def set_hadoop_config(sc: SparkContext) {
-    val prefix = "fs.swift.service." + getKeyOrFail("name")
+    val prefix = "fs.swift2d.service." + getKeyOrFail("name")
     val hconf = sc.hadoopConfiguration
     hconf.set("fs.swift2d.impl", "com.ibm.stocator.fs.ObjectStoreFileSystem")
     //the v2 urls used in all referenced docs are lies... damned lies.

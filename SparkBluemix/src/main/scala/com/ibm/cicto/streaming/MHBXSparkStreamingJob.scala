@@ -38,18 +38,24 @@ object MHBXSparkStreamingJob {
     println("Setting Hadoop/Swift config")
     kafkaProps.set_hadoop_config(sc)
     println("Hadoop/Swift config set")
-    //Create streaming context using a checkpoint directory so we can restart at the correct spot
-    //in case of failure.  This also sets up the batch size.  In this case we are doing batches every
-    //5 seconds.
+
+    //TODO This is a hack workaround...it looks like we need to try reading/writing from sc.textFile before doing any sqlContext work
+    //https://hub.jazz.net/ccm07/resource/itemName/com.ibm.team.workitem.WorkItem/156871
+    println(sc.textFile("swift2d://CogClaim.keystone/nshuklatest.txt").count())
+
+
     kafkaProps.kafkaOptionKeys.foreach { x =>
       print("key= " + x)
       println(" value= " + kafkaProps.getConfig(x))
     }
+    //TODO Leave out checkpointing for now, causing NPEs
+    
     //println("BU " + "tenant is: " + sc.hadoopConfiguration.get("fs.swift.service.spark" + ".tenant"))
-    println("BU here is the checkpoint dir " + kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY))
-    val ssc = StreamingContext.getOrCreate((kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY)), createStreamingContext)
-    //val ssc = StreamingContext.getOrCreate(kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY), createContext _)
+    //println("BU here is the checkpoint dir " + kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY))
+    //val ssc = StreamingContext.getOrCreate((kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY)), createStreamingContext _)
 
+    val ssc = createStreamingContext()
+    
     //Set up connection to the Kafka topic.  In this case we're going to replay all events from Kafka
     //if we restart (auto.offset.reset-> smallest)
     val kafkaTopics = Set("bpmNextMMTopic")
@@ -101,7 +107,8 @@ object MHBXSparkStreamingJob {
           //claimDF.save(PARQUET_FILE_CLAIMS, SaveMode.Append)
 
           //Save to ObjectStorage
-          claimDF.write.mode(SaveMode.Append).save("swift://CogClaim.spark/claims.parquet")
+
+          claimDF.write.mode(SaveMode.Append).save("swift2d://CogClaim.keystone/claims.parquet")
           println("Events saved in ObjectStorage")
         } catch { case e: org.apache.spark.sql.AnalysisException => /* column does not exist in a given event. noop */ }
       }
@@ -114,7 +121,9 @@ object MHBXSparkStreamingJob {
   def createStreamingContext(): StreamingContext = {
     println("creating new streamingcontext")
     val ssc = new StreamingContext(sc, Seconds(10))
-    ssc.checkpoint(kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY)) // set checkpoint directory for recovery
+    println("setting checkpoint " + kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY))
+    //TODO uncomment when checkpointing works again.
+    //ssc.checkpoint(kafkaProps.getConfig(MessageHubConfig.CHECKPOINT_DIR_KEY)) // set checkpoint directory for recovery
     ssc
   }
 }

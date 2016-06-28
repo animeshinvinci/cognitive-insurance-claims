@@ -33,9 +33,9 @@ object Sample {
 
     val sqlContext = SQLContext.getOrCreate(sc)
     import sqlContext.implicits._
-    println("Bu: once again here is the config " + sc.hadoopConfiguration.get("fs.swift.service.spark.auth.url"))
+    println("Bu: once again here is the config " + sc.hadoopConfiguration.get("fs.swift.service.rtclauss.auth.url"))
     println("getting claims")
-    val events = sqlContext.read.parquet("swift://CogClaim.spark/claims.parquet").cache()
+    val events = sqlContext.read.parquet("swift://CogClaim.rtclauss/claims.parquet").cache()
     println(events.count())
   }
 }
