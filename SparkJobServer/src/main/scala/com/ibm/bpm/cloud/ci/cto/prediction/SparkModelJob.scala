@@ -31,7 +31,7 @@ import org.apache.spark.ml.PipelineModel
 class SparkModelJob extends SparkJob with NamedObjectSupport {
 
   //This is an HDFS file location
-  val PARQUET_FILE_CLAIMS = "/data/claims.parquet"
+  val PARQUET_FILE_CLAIMS = "swift2d://CogClaim.keystone/claims.parquet"
 
   implicit def modelPersister[T]: NamedObjectPersister[NamedModel] = new ModelPersister
   implicit def assemblerPersister[T]: NamedObjectPersister[NamedTransformer] = new TransformerPersister
@@ -39,8 +39,9 @@ class SparkModelJob extends SparkJob with NamedObjectSupport {
   implicit def dfPersister = new DataFramePersister
 
   override def runJob(sc: SparkContext, jobConfig: Config): Any = {
+    setupObjectStorage(sc)
+    sc.textFile("swift2d://CogClaim.keystone/nshuklatest.txt").count
     val sqlContext = new SQLContext(sc)
-
     val eventTable = sqlContext.read.parquet(PARQUET_FILE_CLAIMS).cache
     eventTable.registerTempTable("claimData")
     val claimData = sqlContext.sql("select vehicleType, creditScore, estimate, approved, approvedAmount from claimData")
@@ -79,7 +80,7 @@ class SparkModelJob extends SparkJob with NamedObjectSupport {
     val evaluator = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex").setPredictionCol("prediction").setMetricName("precision")
 
     //val paramGrid = new ParamGridBuilder().addGrid(dt.numTrees, Array(5, 10)).addGrid(dt.impurity, Array("gini", "entropy")).addGrid(dt.maxDepth, Array(1, 5)).addGrid(dt.maxBins, Array(10, 50)).build
-val paramGrid = new ParamGridBuilder().addGrid(dt.numTrees, Array(1, 3)).addGrid(dt.impurity, Array("gini", "entropy")).addGrid(dt.maxDepth, Array(1, 2)).addGrid(dt.maxBins, Array(2, 5)).build
+    val paramGrid = new ParamGridBuilder().addGrid(dt.numTrees, Array(1, 3)).addGrid(dt.impurity, Array("gini", "entropy")).addGrid(dt.maxDepth, Array(1, 2)).addGrid(dt.maxBins, Array(2, 5)).build
     val cv = new CrossValidator().setEstimator(pipeline).setEvaluator(evaluator).setEstimatorParamMaps(paramGrid).setNumFolds(3)
     val cvModel = cv.fit(trainingData)
     println("Best Model is: \n" + cvModel.bestModel.asInstanceOf[PipelineModel].stages(2).asInstanceOf[RandomForestClassificationModel].toDebugString)
@@ -111,11 +112,32 @@ val paramGrid = new ParamGridBuilder().addGrid(dt.numTrees, Array(1, 3)).addGrid
     modelString = modelString.replaceAll("\\s", "&nbsp;")
     //println("Best Model is: \n" + modelString)
     //modelString.to
-    var m: Map[String, Any] = Map("bestModel" -> modelString, "accuracy" -> cvAccuracy*100.0)
+    var m: Map[String, Any] = Map("bestModel" -> modelString, "accuracy" -> cvAccuracy * 100.0)
     (m)
   }
 
   override def validate(sc: SparkContext, config: Config): SparkJobValidation = {
-    if (Files.exists(Paths.get(PARQUET_FILE_CLAIMS))) SparkJobValid else SparkJobInvalid(s"Missing claim parquet file")
+    //if (Files.exists(Paths.get(PARQUET_FILE_CLAIMS))) SparkJobValid else SparkJobInvalid(s"Missing claim parquet file")
+    SparkJobValid
+  }
+
+  def setupObjectStorage(sc: SparkContext) {
+    val prefix = "fs.swift2d.service.keystone";
+    val hconf = sc.hadoopConfiguration;
+    hconf.set("fs.swift2d.impl", "com.ibm.stocator.fs.ObjectStoreFileSystem");
+    //the v2 urls used in all referenced docs are lies... damned lies.
+    //See https://developer.ibm.com/answers/answers/270672/view.html
+    hconf.set(prefix + ".auth.url", "https://identity.open.softlayer.com/v3/auth/tokens")
+    hconf.set(prefix + ".auth.method", "keystoneV3")
+    hconf.set(prefix + ".auth.endpoint.prefix", "endpoints")
+    hconf.set(prefix + ".tenant", "5b9d6598c966484baaf8ae45ef9a9bcf")
+    hconf.set(prefix + ".username", "185edd37c1434a5ab12c8e3b3f9a7aa6")
+    hconf.set(prefix + ".password", "GkWtD4GM^).60.qr")
+    hconf.setInt(prefix + ".http.port", 8080)
+    hconf.set(prefix + ".region", "dallas")
+    hconf.setBoolean(prefix + ".public", true)
+    println("BU fs.swift2d.impl " + hconf.get("fs.swift2d.impl"))
+    println("BU " + prefix + ".auth.url: " + sc.hadoopConfiguration.get(prefix + ".auth.url"))
+
   }
 }
