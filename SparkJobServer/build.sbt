@@ -28,7 +28,7 @@ libraryDependencies += "spark.jobserver" %% "job-server-extras" % "0.6.2" % "pro
 //Add Object Storage/Swift Support
 libraryDependencies += "org.apache.hadoop" % "hadoop-openstack" % "2.6.0" % "provided"
 //Should try this one, too.
-libraryDependencies += "com.ibm.stocator" % "stocator" % "1.0.3"
+libraryDependencies += "com.ibm.stocator" % "stocator" % "1.0.4"
 
 
 transitiveClassifiers := Seq("sources", "javadoc")
