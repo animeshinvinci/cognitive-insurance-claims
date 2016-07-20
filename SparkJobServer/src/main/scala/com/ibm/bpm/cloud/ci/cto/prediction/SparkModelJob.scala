@@ -80,7 +80,7 @@ class SparkModelJob extends SparkJob with NamedObjectSupport {
     val evaluator = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex").setPredictionCol("prediction").setMetricName("precision")
 
     //val paramGrid = new ParamGridBuilder().addGrid(dt.numTrees, Array(5, 10)).addGrid(dt.impurity, Array("gini", "entropy")).addGrid(dt.maxDepth, Array(1, 5)).addGrid(dt.maxBins, Array(10, 50)).build
-    val paramGrid = new ParamGridBuilder().addGrid(dt.numTrees, Array(1, 3)).addGrid(dt.impurity, Array("gini", "entropy")).addGrid(dt.maxDepth, Array(1, 2)).addGrid(dt.maxBins, Array(2, 5)).build
+    val paramGrid = new ParamGridBuilder().addGrid(dt.numTrees, Array(1, 4)).addGrid(dt.impurity, Array("gini", "entropy")).addGrid(dt.maxDepth, Array(1, 4)).addGrid(dt.maxBins, Array(2, 5)).build
     val cv = new CrossValidator().setEstimator(pipeline).setEvaluator(evaluator).setEstimatorParamMaps(paramGrid).setNumFolds(3)
     val cvModel = cv.fit(trainingData)
     println("Best Model is: \n" + cvModel.bestModel.asInstanceOf[PipelineModel].stages(2).asInstanceOf[RandomForestClassificationModel].toDebugString)
