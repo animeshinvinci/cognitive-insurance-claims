@@ -1,36 +1,64 @@
 package com.ibm.bpm
 
 import java.io.ByteArrayInputStream
-import java.util.HashMap
-import scala.collection.JavaConversions.asScalaBuffer
-import org.apache.commons.codec.binary.Base64
+import java.io.File
 import java.io.FileOutputStream
-import java.io.BufferedOutputStream
-import com.ibm.watson.developer_cloud.visual_recognition.v2.VisualRecognition
-import com.ibm.watson.developer_cloud.alchemy.v1.AlchemyLanguage
+import java.io.InputStream
+import java.util.ArrayList
+import java.util.HashMap
+
+import scala.collection.JavaConversions.asScalaBuffer
 import scala.collection.immutable.ListMap
 
-class CallWatson {
-  val watson = new VisualRecognition("2015-12-02")
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.io.IOUtils
 
-  def classifyImage(username: String, password: String, fileName: String, b64ImageString: String): HashMap[String, java.lang.Double] = {
-    val responseMap = new HashMap[String, java.lang.Double]
-    watson.setUsernameAndPassword(username, password)
+import com.ibm.watson.developer_cloud.alchemy.v1.AlchemyLanguage
+import com.ibm.watson.developer_cloud.util.GsonSingleton
+import com.ibm.watson.developer_cloud.visual_recognition.v3.VisualRecognition
+import com.ibm.watson.developer_cloud.visual_recognition.v3.model.ClassifyImagesOptions
+
+class CallWatson {
+  val watson = new VisualRecognition(VisualRecognition.VERSION_DATE_2016_05_19)
+  val PREFIX = "stream2file"
+
+  val SUFFIX = ".png" //must be either png or jpg for Watson image service to work.
+
+  def classifyImage(apiKey: String, username: String, password: String, fileName: String, b64ImageString: String): String = {
+    if (!Option(apiKey).getOrElse("").isEmpty()) {
+      watson.setApiKey(apiKey)
+      watson.setEndPoint("http://rtclaussproxy.mybluemix.net/visual-recognition/api")
+    } else {
+      watson.setUsernameAndPassword(username, password)
+    }
     println("BU: converting image")
     val imageBytes = b64ImageString.getBytes
     val image = Base64.decodeBase64(imageBytes)
     val imageStream = new ByteArrayInputStream(image)
-    println("BU: uploading to Watson for classification")
-    val recognizedImage = watson.classify(fileName, imageStream, null)
+
+    println("BU: Saving image to temp file.")
+    val tmpFile = stream2file(imageStream)
+    println("BU: received file.  building up options")
+    //Add default classifiers to work around a bug in 3.0.1 of Watson Client
+    val classifiers = new ArrayList[String]()
+    classifiers.add("default")
+    val options = new ClassifyImagesOptions.Builder()
+      .images(tmpFile)
+      .classifierIds(classifiers)
+      .build()
+    println("BU: done building. calling watson")
+    val recognizedImage = watson.classify(options).execute()
     println("BU: classification complete, getting scores")
+    var response = ""
     recognizedImage.getImages.foreach { x =>
-      x.getScores.foreach { y =>
-        responseMap.put(y.getName, y.getScore)
+      x.getClassifiers.foreach { y =>
+        response += GsonSingleton.getGson().toJson(y.getClasses)
+        println("BU here is the response " + response)
       }
     }
-    recognizedImage.getImages.foreach { x => println("BU: " + x) }
-
-    responseMap
+    response = response.toString().replace("class", "className")
+    println(response)
+    response
   }
 
   def getPropertyTaxonomy(apiKey: String, properties: String): String = {
@@ -39,7 +67,7 @@ class CallWatson {
     alchemy.setApiKey(apiKey)
     params.put(AlchemyLanguage.TEXT, properties)
     println("BU: getting taxonomy for " + params.toString())
-    val taxonomies = alchemy.getTaxonomy(params)
+    val taxonomies = alchemy.getTaxonomy(params).execute()
     println("BU: taxonomies retrieved " + taxonomies)
     var label = ""
     var confident = false
@@ -63,4 +91,23 @@ class CallWatson {
     label
   }
 
+  def stream2file(in: InputStream): File = {
+    try {
+      val tempFile = File.createTempFile(PREFIX, SUFFIX)
+      tempFile.deleteOnExit()
+      val out = new FileOutputStream(tempFile)
+      IOUtils.copy(in, out)
+      out.flush()
+      IOUtils.closeQuietly(in)
+      IOUtils.closeQuietly(out)
+      println("BU: wrote image to " + tempFile)
+      tempFile
+    } catch {
+      case e: Exception => {
+        println("oops in writing image to file")
+        println(e)
+        null
+      }
+    }
+  }
 }
