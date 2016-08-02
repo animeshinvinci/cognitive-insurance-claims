@@ -9,15 +9,16 @@ resolvers += "Job Server Bintray" at "https://dl.bintray.com/spark-jobserver/mav
 val ivyLocal = Resolver.file("local", file(Path.userHome.absolutePath + "/.ivy2/local"))
 
 //Here are the Spark Dependencies
-libraryDependencies += "org.apache.spark" %% "spark-core" % "2.0.0" % "provided"
-libraryDependencies += "org.apache.spark" %% "spark-streaming" % "2.0.0"  % "provided"
-libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.0.0" % "provided"
-libraryDependencies += "org.apache.spark" %% "spark-yarn" % "2.0.0" % "provided"
-libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.0.0"% "provided"
+libraryDependencies += "org.apache.spark" %% "spark-core" % "1.6.1" % "provided"
+//libraryDependencies += "org.apache.spark" %% "spark-streaming-kafka" % "1.6.1" // % "provided"
+libraryDependencies += "org.apache.spark" %% "spark-streaming" % "1.6.1"  % "provided"
+libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.6.1" % "provided"
+libraryDependencies += "org.apache.spark" %% "spark-yarn" % "1.6.1" % "provided"
+libraryDependencies += "org.apache.spark" %% "spark-mllib" % "1.6.1"% "provided"
 
 //Add Spark Job Server support
-libraryDependencies += "spark.jobserver" %% "job-server-api" % "0.7.0-SNAPSHOT" % "provided"
-libraryDependencies += "spark.jobserver" %% "job-server-extras" % "0.7.0-SNAPSHOT" % "provided"
+libraryDependencies += "spark.jobserver" %% "job-server-api" % "0.6.2" % "provided"
+libraryDependencies += "spark.jobserver" %% "job-server-extras" % "0.6.2" % "provided"
 
 //Add Kafka 0.9 Support
 //libraryDependencies += "org.apache.kafka" % "kafka-log4j-appender" % "0.9.0.0"
@@ -33,7 +34,7 @@ libraryDependencies += "com.ibm.stocator" % "stocator" % "1.0.4"
 transitiveClassifiers := Seq("sources", "javadoc")
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-yarn" % "2.0.0" % "provided" excludeAll ExclusionRule(organization = "org.apache.hadoop"),
+  "org.apache.spark" %% "spark-yarn" % "1.6.1" % "provided" excludeAll ExclusionRule(organization = "org.apache.hadoop"),
   "org.apache.hadoop" % "hadoop-client" % "2.4.0" % "provided",
   "org.apache.hadoop" % "hadoop-yarn-client" % "2.4.0" % "provided",
   "org.apache.hadoop" % "hadoop-hdfs" % "2.4.0" % "provided"  
