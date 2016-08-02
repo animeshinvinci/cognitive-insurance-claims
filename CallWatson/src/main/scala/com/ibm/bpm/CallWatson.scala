@@ -27,7 +27,7 @@ class CallWatson {
   def classifyImage(apiKey: String, username: String, password: String, fileName: String, b64ImageString: String): String = {
     if (!Option(apiKey).getOrElse("").isEmpty()) {
       watson.setApiKey(apiKey)
-      watson.setEndPoint("http://rtclaussproxy.mybluemix.net/visual-recognition/api")
+      //watson.setEndPoint("http://rtclaussproxy.mybluemix.net/visual-recognition/api")
     } else {
       watson.setUsernameAndPassword(username, password)
     }
