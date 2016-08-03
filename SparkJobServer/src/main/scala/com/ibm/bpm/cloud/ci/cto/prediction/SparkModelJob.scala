@@ -39,6 +39,7 @@ import spark.jobserver.SparkJobValidation
 import org.apache.spark.mllib.clustering.GaussianMixture
 import org.apache.spark.ml.classification.NaiveBayes
 import org.apache.spark.ml.classification.NaiveBayesModel
+import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 
 object SparkModelJob extends SparkJob with NamedObjectSupport {
   //Data files
@@ -53,6 +54,7 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
   implicit def modelPersister[T]: NamedObjectPersister[NamedModel] = new ModelPersister
   implicit def assemblerPersister[T]: NamedObjectPersister[NamedTransformer] = new TransformerPersister
   implicit def floatPersister[T]: NamedObjectPersister[NamedDouble] = new DoublePersister
+  implicit def stringPersister[T]: NamedObjectPersister[NamedString] = new StringPersister
   implicit def dfPersister = new DataFramePersister
 
   override def runJob(sc: SparkContext, jobConfig: Config): Any = {
@@ -67,27 +69,30 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     //claimData.show()
     val (cvModel, cvAccuracy) =
       modelType match {
-        case "kmeans" => generateKMeans(sc, claimData)
-        case "decisionForest" => generateRandomDecisionForest(sc, claimData)
-        case "neuralNet" => generateMPC(sc, claimData)
-        case "logReg" => generateLogisticRegression(sc, claimData)
-        case "nBayes" => generateNaiveBayes(sc, claimData)
+        case "kmeans" => generateKMeans(modelType, sc, claimData)
+        case "decisionForest" => generateRandomDecisionForest(modelType, sc, claimData)
+        case "neuralNet" => generateMPC(modelType, sc, claimData)
+        case "logReg" => generateLogisticRegression(modelType, sc, claimData)
+        case "nBayes" => generateNaiveBayes(modelType, sc, claimData)
       }
-    var modelString = ""
-    //    if (!cvModel.isInstanceOf[PipelineModel]) {
-    //      val model = cvModel.asInstanceOf[]
-    //      //TODO once https://issues.apache.org/jira/browse/SPARK-16857 is addressed or we get spark 2.0 running on spark-jobserver uncomment
-    //      var modelString = cvModel.bestModel.asInstanceOf[PipelineModel].stages(2).asInstanceOf[RandomForestClassificationModel].toDebugString
-    //      modelString = modelString.replaceAll("feature 0", "approvedAmount")
-    //      modelString = modelString.replaceAll("feature 1", "estimate")
-    //      modelString = modelString.replaceAll("feature 2", "creditScore")
-    //      modelString = modelString.replaceAll(" 0\\.0", " reject")
-    //      modelString = modelString.replaceAll(" 1\\.0", " approve")
-    //      modelString = modelString.replaceAll("\\n", "<br>")
-    //      modelString = modelString.replaceAll("\\s", "&nbsp;")
-    //    }
 
-    //println("Best Model is: \n" + modelString)
+    var modelString = "Model Type: " + modelType + "<br>"
+    modelType match {
+      case "kmeans" => modelString += cvModel.asInstanceOf[PipelineModel].stages(2).explainParams().replaceAll("\\n", "<br>")
+      case "decisionForest" => {
+        //TODO once https://issues.apache.org/jira/browse/SPARK-16857 is addressed or we get spark 2.0 running on spark-jobserver uncomment
+        modelString += cvModel.asInstanceOf[CrossValidatorModel].bestModel.asInstanceOf[PipelineModel].stages(2).asInstanceOf[RandomForestClassificationModel].toDebugString
+        modelString = modelString.replaceAll("feature 0", "approvedAmount")
+        modelString = modelString.replaceAll("feature 1", "estimate")
+        modelString = modelString.replaceAll("feature 2", "creditScore")
+        modelString = modelString.replaceAll(" 0\\.0", " reject")
+        modelString = modelString.replaceAll(" 1\\.0", " approve")
+        modelString = modelString.replaceAll("\\n", "<br>")
+        modelString = modelString.replaceAll("\\s", "&nbsp;")
+      }
+      case _ => modelString += cvModel.asInstanceOf[CrossValidatorModel].bestModel.asInstanceOf[PipelineModel].stages(2).explainParams().replaceAll("\\n", "<br>")
+    }
+    println("Best Model is: \n" + modelString)
     //modelString.to
     //var modelString = cvModel.bestModel.asInstanceOf[PipelineModel].stages(2).asInstanceOf[LogisticRegressionModel]
     var m: Map[String, Any] = Map("bestModel" -> modelString, "accuracy" -> cvAccuracy * 100.0, "numClaims" -> eventTable.count())
@@ -101,7 +106,7 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
       .getOrElse(SparkJobInvalid("Include one of modelType=[decisionForest, kmeans, neuralNet, nBayes, logReg] as a parameter"))
   }
 
-  def generateRandomDecisionForest(sc: SparkContext, claimData: DataFrame): (CrossValidatorModel, Double) = {
+  def generateRandomDecisionForest(modelType: String, sc: SparkContext, claimData: DataFrame): (CrossValidatorModel, Double) = {
     val assembler = new VectorAssembler().setInputCols(Array("approvedAmount", "estimate", "creditScore" /*,"homeStateVec","vehicleTypeVec"*/ )).setOutputCol("features")
     val vectoredTable = assembler.transform(claimData)
 
@@ -114,7 +119,7 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     val labelConverter = new IndexToString().setInputCol("prediction").setOutputCol("predictedLabel").setLabels(labelIndexer.labels)
     val pipeline = new Pipeline().setStages(Array(labelIndexer, featureIndexer, dt, labelConverter))
 
-    val evaluator = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex").setPredictionCol("prediction") //.setMetricName("precision")
+    val evaluator = new BinaryClassificationEvaluator().setLabelCol("approvedIndex") //.setRawPredictionCol("prediction") //.setMetricName("precision")
     val paramGrid = new ParamGridBuilder().addGrid(dt.numTrees, Array(1, 4)).addGrid(dt.impurity, Array("gini", "entropy")).addGrid(dt.maxDepth, Array(1, 4)).addGrid(dt.maxBins, Array(3, 4)).build
     val cv = new CrossValidator().setEstimator(pipeline).setEvaluator(evaluator).setEstimatorParamMaps(paramGrid).setNumFolds(10)
     val cvModel = cv.fit(trainingData)
@@ -129,14 +134,14 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     val cvAccuracy = myeq / total
     //cvPredict.registerTempTable("cvPredict")
 
-    saveObjectsToMemory(cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
+    saveObjectsToMemory(modelType, cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
     println("objects saved to memory")
     //TODO once we move to Spark 2.0 uncomment the following line.
     //saveObjectsToObjectStorage(cvModel, assembler, labelIndexer, featureIndexer)
     (cvModel, cvAccuracy)
   }
 
-  def generateLogisticRegression(sc: SparkContext, claimData: DataFrame): (CrossValidatorModel, Double) = {
+  def generateLogisticRegression(modelType: String, sc: SparkContext, claimData: DataFrame): (CrossValidatorModel, Double) = {
     val assembler = new VectorAssembler().setInputCols(Array("approvedAmount", "estimate", "creditScore" /*,"homeStateVec","vehicleTypeVec"*/ )).setOutputCol("features")
     val vectoredTable = assembler.transform(claimData)
     //val vectoredTable = assembler.transform(vehicleTypeEncoded)
@@ -154,7 +159,7 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     // predictions.show()
     // predictions.select("predictedLabel", "approved", "features").show()
 
-    val evaluator = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex").setPredictionCol("prediction")
+    val evaluator = new BinaryClassificationEvaluator().setLabelCol("approvedIndex") //.setPredictionCol("prediction")
     val paramGrid = new ParamGridBuilder().addGrid(lr.regParam, Array(.1, .3, .5)).addGrid(lr.maxIter, Array(100, 200, 500)).addGrid(lr.elasticNetParam, Array(.5, .8, .9)).build()
     val cv = new CrossValidator().setEstimator(pipeline).setEvaluator(evaluator).setEstimatorParamMaps(paramGrid).setNumFolds(10)
     val cvModel = cv.fit(trainingData)
@@ -165,12 +170,12 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     val cvEval = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex").setPredictionCol("prediction").setMetricName("precision")
     val cvAccuracy = cvEval.evaluate(cvPredict)
     //cvPredict.registerTempTable("cvPredict")
-    saveObjectsToMemory(cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
-    saveObjectsToObjectStorage(cvModel, assembler, labelIndexer, featureIndexer)
+    saveObjectsToMemory(modelType, cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
+    //saveObjectsToObjectStorage(cvModel, assembler, labelIndexer, featureIndexer)
     (cvModel, cvAccuracy)
   }
 
-  def generateKMeans(sc: SparkContext, claimData: DataFrame): (PipelineModel, Double) = {
+  def generateKMeans(modelType: String, sc: SparkContext, claimData: DataFrame): (PipelineModel, Double) = {
     val assembler = new VectorAssembler().setInputCols(Array("approvedAmount", "estimate", "creditScore" /*,"homeStateVec","vehicleTypeVec"*/ )).setOutputCol("features")
     val vectoredTable = assembler.transform(claimData)
     //val vectoredTable = assembler.transform(vehicleTypeEncoded)
@@ -192,8 +197,8 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     val predictions = model.transform(testData)
     val wssse = model.stages(2).asInstanceOf[KMeansModel].computeCost(predictions)
     println("WSSE = " + wssse)
-    saveObjectsToMemory(model, assembler, labelIndexer, featureIndexer, wssse, sc)
-    saveObjectsToObjectStorage(model, assembler, labelIndexer, featureIndexer)
+    saveObjectsToMemory(modelType, model, assembler, labelIndexer, featureIndexer, wssse, sc)
+    //saveObjectsToObjectStorage(model, assembler, labelIndexer, featureIndexer)
     (model, wssse)
     //val predictions = model.transform(testData)
     //predictions.show()
@@ -201,7 +206,7 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
 
     //TODO once https://issues.apache.org/jira/browse/SPARK-16857 is addressed, uncomment
     /*
-    val evaluator = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex")//.setPredictionCol("prediction")
+    val evaluator = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex") //.setPredictionCol("prediction")
     val paramGrid = new ParamGridBuilder().addGrid(mpc.maxIter, Array(100, 200, 500)).build()
     val cv = new CrossValidator().setEstimator(pipeline).setEvaluator(evaluator).setEstimatorParamMaps(paramGrid).setNumFolds(10)
     val cvModel = cv.fit(trainingData)
@@ -209,15 +214,16 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     println("cluster centers are: " + cvModel.bestModel.asInstanceOf[PipelineModel].stages(2).asInstanceOf[KMeansModel].clusterCenters)
 
     val cvPredict = cvModel.transform(testData)
-    val cvEval = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex").setPredictionCol("prediction").setMetricName("precision")
+    val cvEval = new BinaryClassificationEvaluator().setLabelCol("approvedIndex") //.setPredictionCol("prediction").setMetricName("precision")
     val cvAccuracy = cvEval.evaluate(cvPredict)
     saveObjectsToMemory(cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
     saveObjectsToObjectStorage(cvModel, assembler, labelIndexer, featureIndexer)
     (cvModel, cvAccuracy)
     */
+
   }
 
-  def generateNaiveBayes(sc: SparkContext, claimData: DataFrame): (CrossValidatorModel, Double) = {
+  def generateNaiveBayes(modelType: String, sc: SparkContext, claimData: DataFrame): (CrossValidatorModel, Double) = {
     val assembler = new VectorAssembler().setInputCols(Array("approvedAmount", "estimate", "creditScore" /*,"homeStateVec","vehicleTypeVec"*/ )).setOutputCol("features")
     val vectoredTable = assembler.transform(claimData)
     //val vectoredTable = assembler.transform(vehicleTypeEncoded)
@@ -231,7 +237,7 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     val labelConverter = new IndexToString().setInputCol("prediction").setOutputCol("predictedLabel").setLabels(labelIndexer.labels)
     val pipeline = new Pipeline().setStages(Array(labelIndexer, featureIndexer, nb, labelConverter))
 
-    val evaluator = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex").setPredictionCol("prediction")
+    val evaluator = new BinaryClassificationEvaluator().setLabelCol("approvedIndex") //.setPredictionCol("prediction")
     val paramGrid = new ParamGridBuilder().addGrid(nb.smoothing, Array(1, 1.5)).build()
     val cv = new CrossValidator().setEstimator(pipeline).setEvaluator(evaluator).setEstimatorParamMaps(paramGrid).setNumFolds(10)
     val cvModel = cv.fit(trainingData)
@@ -239,16 +245,16 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     cvModel.bestModel.asInstanceOf[PipelineModel].stages(2).asInstanceOf[NaiveBayesModel].params.foreach(println)
     val cvPredict = cvModel.transform(testData)
 
-    val cvEval = new MulticlassClassificationEvaluator().setLabelCol("approvedIndex").setPredictionCol("prediction").setMetricName("precision")
+    val cvEval = new BinaryClassificationEvaluator().setLabelCol("approvedIndex") //.setPredictionCol("prediction").setMetricName("precision")
     val cvAccuracy = cvEval.evaluate(cvPredict)
     //cvPredict.registerTempTable("cvPredict")
 
-    saveObjectsToMemory(cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
+    saveObjectsToMemory(modelType, cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
     //saveObjectsToObjectStorage(cvModel, assembler, labelIndexer, featureIndexer)
     (cvModel, cvAccuracy)
   }
 
-  def generateMPC(sc: SparkContext, claimData: DataFrame): (CrossValidatorModel, Double) = {
+  def generateMPC(modelType: String, sc: SparkContext, claimData: DataFrame): (CrossValidatorModel, Double) = {
     val assembler = new VectorAssembler().setInputCols(Array("approvedAmount", "estimate", "creditScore" /*,"homeStateVec","vehicleTypeVec"*/ )).setOutputCol("features")
     val vectoredTable = assembler.transform(claimData)
     //val vectoredTable = assembler.transform(vehicleTypeEncoded)
@@ -283,12 +289,13 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     val cvAccuracy = cvEval.evaluate(cvPredict)
     //cvPredict.registerTempTable("cvPredict")
 
-    saveObjectsToMemory(cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
+    saveObjectsToMemory(modelType, cvModel, assembler, labelIndexer, featureIndexer, cvAccuracy, sc)
     //saveObjectsToObjectStorage(cvModel, assembler, labelIndexer, featureIndexer)
     (cvModel, cvAccuracy)
   }
 
-  def saveObjectsToMemory(cv: CrossValidatorModel, vecAssembler: VectorAssembler, labelIndexer: StringIndexerModel, vecIndexerModel: VectorIndexerModel, cvAccuracy: Double, sc: SparkContext) {
+  def saveObjectsToMemory(modelType: String, cv: CrossValidatorModel, vecAssembler: VectorAssembler, labelIndexer: StringIndexerModel, vecIndexerModel: VectorIndexerModel, cvAccuracy: Double, sc: SparkContext) {
+    this.namedObjects.update("model:modelType", NamedString(modelType, sc, StorageLevel.MEMORY_ONLY))
     this.namedObjects.update("model:claimModel", NamedModel(cv, sc, StorageLevel.MEMORY_ONLY))
     this.namedObjects.update("assembler:assembler", NamedTransformer(vecAssembler, sc, StorageLevel.MEMORY_ONLY))
     this.namedObjects.update("indexer:labelIndexer", NamedModel(labelIndexer, sc, StorageLevel.MEMORY_ONLY))
@@ -298,7 +305,8 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
     //this.namedObjects.update("model:vehicleTypeIndexer", NamedModel(vehicleTypeIndexer, sc, StorageLevel.MEMORY_ONLY)
   }
 
-  def saveObjectsToMemory(model: PipelineModel, vecAssembler: VectorAssembler, labelIndexer: StringIndexerModel, vecIndexerModel: VectorIndexerModel, cvAccuracy: Double, sc: SparkContext) {
+  def saveObjectsToMemory(modelType: String, model: PipelineModel, vecAssembler: VectorAssembler, labelIndexer: StringIndexerModel, vecIndexerModel: VectorIndexerModel, cvAccuracy: Double, sc: SparkContext) {
+    this.namedObjects.update("model:modelType", NamedString(modelType, sc, StorageLevel.MEMORY_ONLY))
     this.namedObjects.update("model:claimModel", NamedModel(model, sc, StorageLevel.MEMORY_ONLY))
     this.namedObjects.update("assembler:assembler", NamedTransformer(vecAssembler, sc, StorageLevel.MEMORY_ONLY))
     this.namedObjects.update("indexer:labelIndexer", NamedModel(labelIndexer, sc, StorageLevel.MEMORY_ONLY))
