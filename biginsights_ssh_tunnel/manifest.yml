@@ -1,0 +1,11 @@
+---
+applications:
+- name: CogClaimBIProxy
+  memory: 128M
+  disk_quota: 512M
+  buildpack: nodejs_buildpack
+  host: CogClaimBIProxy
+  domain: mybluemix.net
+  command: node index.js
+  timeout: 80
+
