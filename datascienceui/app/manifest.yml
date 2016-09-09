@@ -1,0 +1,11 @@
+---
+applications:
+- name: CogClaimDataScientistUI
+  disk_quota: 512M
+  buildpack: sdk-for-nodejs
+  host: cogclaimui
+  domain: mybluemix.net
+  command: node bin/www
+  timeout: 180
+  memory: 128M
+

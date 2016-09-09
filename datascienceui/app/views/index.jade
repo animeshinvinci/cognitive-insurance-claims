@@ -1,0 +1,37 @@
+extends ../node_modules/jade-bootstrap/layouts/starter
+append styles
+	link(href='../css/sticky-footer.css', rel='stylesheet')
+
+block body
+	+navbar-fixed("Cognitive Claims","navbar","inverse")
+		+nav_item("#","active") Home
+		+nav_item("#") About
+		+nav_item("#") Contact
+	.container
+		.starter-template
+			h1 Machine Learning Models
+			p.lead
+			| Generate and compare various machine learning models.
+			br
+		+panel-info("Current Model")
+			p Current accuracy is: #{model.accuracy}%
+			p !{model.bestModel}
+
+		h3 Generate a new model
+		+dropdown("Machine Learning Model",[
+		{text:"K-Means", url:'/newModel?model=kmeans'},
+		{text:"Random Decision Forest", url:'/newModel?model=decisionForest'},
+		{text:"Neural Net", url:'/newModel?model=neuralNet'},
+		{text:"Logistic Regression", url:'/newModel?model=logReg'},
+		{text:"Naive Bayes", url:'/newModel?model=nBayes'},
+		])
+		br
+		p This page will automatically navigate when the model is complete.
+
+		//Todo make responsive
+		//TODO add progress bar
+	br
+	br
+	footer.footer
+		.container.vertical-center
+			p.text-muted IBM Cloud Integration CTO Office
