@@ -26,6 +26,9 @@ gradle-app.setting
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
 
+# Ignore Mac hidden fiels
+.DS_Store
+
 # Cache of project
 .gradletasknamecache
 
