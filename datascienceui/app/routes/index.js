@@ -6,7 +6,7 @@ var unirest = require('unirest');
 router.get('/', function(req, res, next) {
 unirest.post("http://169.44.9.196:8090/jobs?appName=test&classPath=com.ibm.bpm.cloud.ci.cto.prediction.GetModelJob&context=model-context&sync=true")
   .end(function(response){
-    //console.log(response.body);
+    console.log(response.body);
     const model = response.body.result;
     console.log(model)
   res.render('index', { title: 'Cognitive Claims', model: model });
