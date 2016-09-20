@@ -1,9 +1,9 @@
-This project implements a JMS Listener for IBM BPM's Dynamic Event Framework (DEF).  To build this ear run `gradle war` from this directory.  Please note that you need to run the following against your BPM instance:
+This project implements a JMS Listener for IBM BPM's Dynamic Event Framework (DEF).  This information is from the BPM Technote for [JR51784](https://www-01.ibm.com/support/docview.wss?uid=swg1JR51784).  To build this ear run `gradle war` from this directory.  Please note that you need to run the following against your BPM instance:
 
 1. create the queue `jms/myDefQ`
 1. create the queue connection factory `jms/myDefQCF`.  *Must* be a queue connection factory or you will get a `ClassCastException` from DEF and Karri will be sad. 😒
 1. create the activiation spec `jms/myDefAS`
-1. run the scripts in [ConfigureEventsToJMS.py](../bpm_twx/ConfigureEventsToJMS.py]
+1. run the scripts in [ConfigureEventsToJMS.py](ConfigureEventsToJMS.py)
 1. create a JAAS application login entry (via the admin console) with the following data, replacing the username and password with your provisioned Message Hub username and password:
 ```
 KafkaClient {
