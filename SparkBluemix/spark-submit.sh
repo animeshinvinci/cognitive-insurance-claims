@@ -3,7 +3,7 @@
 # IBM Confidential
 # OCO Source Materials
 # 5725-Y50
-# (C) Copyright IBM Corp. 2015
+# (C) Copyright IBM Corp. 2015, 2016
 # The source code for this program is not published or otherwise divested of its trade secrets, irrespective of what has been deposited with the U.S. Copyright Office.
 
 ###############################################################################
@@ -107,7 +107,8 @@ CHECK_STATUS=false
 KILL_JOB=false
 PY_APP=false
 IS_JOB_ERROR=false
-VERSION="1.0.0.0.20160510.1"
+HEADER_REQUESTED_WITH=spark-submit
+VERSION="1.0.5"
 DEFAULT_SPARK_VERSION="1.6.0"
 
 # Determine which sha command to use for UUID calculation
@@ -198,7 +199,7 @@ console()
 endScript()
 {
     console "\nSubmission complete.\n"
-    console "Log file: ${LOG_FILE}\n"
+    console "spark-submit log file: ${LOG_FILE}\n"
 }
 
 endScriptWithCommands()
@@ -223,7 +224,7 @@ endScriptWithCommands()
           console "\"curl ${SS_CURL_OPTIONS} -X DELETE $(get_http_authentication) -H '$(get_http_instance_id)' https://${HOSTNAME}/tenant/data/${SERVER_SUB_DIR}\" \n"
        fi
     fi
-    console "Log file: ${LOG_FILE}\n"
+    console "spark-submit log file: ${LOG_FILE}\n"
 }
 
 
@@ -256,6 +257,11 @@ get_http_authentication()
 get_http_instance_id()
 {
     echo "X-Spark-service-instance-id: ${INSTANCE_ID}"
+}
+
+get_requested_with_header()
+{
+    echo "X-Requested-With: ${HEADER_REQUESTED_WITH}"
 }
 
 display_master_url_err_msg() 
@@ -569,15 +575,11 @@ submit_REST_json()
     reqJson+=" \"appArgs\" : [ ${appArgs} ], "
     reqJson+=" \"appResource\" : \"${appResource}\","
     reqJson+=" \"clientSparkVersion\" : \"1.6.0\","
-    reqJson+=" \"environmentVariables\" : { \"SPARK_SUBMIT_DEPLOY_MODE\" : \"cluster\"}, "
     reqJson+=" \"mainClass\" : \"${mainClass}\", "
     reqJson+=" \"sparkProperties\" : { "
 
     ##### properties: spark.app.name
     reqJson+=" \"spark.app.name\" : \"${APP_NAME}\", "
-
-    ##### properties: spark.submit.deployMode
-    reqJson+=" \"spark.submit.deployMode\" : \"cluster\", "
 
     ##### properties: spark.jars - add appResource to jars list if this is java application
     if [ -n "${sparkJars}" ]
@@ -658,8 +660,7 @@ status_kill_REST_json()
     reqJson+=" \"spark.service.tenant_id\" : \"${TENANT_ID}\", "
     reqJson+=" \"spark.service.instance_id\" : \"${INSTANCE_ID}\", "
     reqJson+=" \"spark.service.tenant_secret\" : \"${TENANT_SECRET}\", "
-    reqJson+=" \"spark.service.spark_version\" : \"${DEFAULT_SPARK_VERSION}\", "
-    reqJson+=" \"spark.service.submission_id\" : \"${submissionId}\" "
+    reqJson+=" \"spark.service.spark_version\" : \"${DEFAULT_SPARK_VERSION}\" "
     reqJson+="}"
     reqJson+="}"
  
@@ -669,7 +670,7 @@ status_kill_REST_json()
 call_status_REST()
 {
     local requestBody=$(status_kill_REST_json)
-    local cmd="curl ${SS_CURL_OPTIONS} -X GET -i --data-binary '${requestBody}' https://${HOSTNAME}/v1/submissions/status/${submissionId}"
+    local cmd="curl ${SS_CURL_OPTIONS} -X GET -H '$(get_requested_with_header)' -i --data-binary '${requestBody}' https://${HOSTNAME}/v1/submissions/status/${submissionId}"
     console "\nGetting status\n"
     logMessage "call_status_REST command: ${cmd}\n"
     local statusRequest=$(eval "${cmd}")
@@ -680,7 +681,7 @@ call_status_REST()
 call_kill_REST()
 {
     local requestBody=$(status_kill_REST_json)
-    local cmd="curl ${SS_CURL_OPTIONS} -X POST -i --data-binary '${requestBody}' https://${HOSTNAME}/v1/submissions/kill/${submissionId}"
+    local cmd="curl ${SS_CURL_OPTIONS} -X POST -H '$(get_requested_with_header)' -i --data-binary '${requestBody}' https://${HOSTNAME}/v1/submissions/kill/${submissionId}"
     console "\nKilling submission\n"
     logMessage "call_kill_REST command: ${cmd}\n"
     local killRequest=$(eval "${cmd}")
@@ -700,6 +701,7 @@ trap ctrlc_handle SIGINT
 if [[ $# == 0 ]]
 then
    printUsage
+   exit 1
 fi
 
 while [[ $# > 0 ]]
@@ -779,6 +781,7 @@ do
             if [[ "${key}" =~ ^--.* ]] &&  [[ -z "${APP_MAIN}" ]]; then
                 printf "Error: Unrecognized option: ${key} \n"
                 printUsage
+                exit 1
             else
                 if [ -z "${APP_MAIN}" ]
                 then
@@ -1003,7 +1006,7 @@ requestBody=$(submit_REST_json "${app_parms}" "${app_server_path}" "${mainClass}
 
 # -- Call spark-submit REST to submit the job to spark cluster ---------------------
 
-cmd="curl ${SS_CURL_OPTIONS} -X POST --data-binary '${requestBody}' https://${HOSTNAME}/v1/submissions/create"
+cmd="curl ${SS_CURL_OPTIONS} -X POST -H '$(get_requested_with_header)' --data-binary '${requestBody}' https://${HOSTNAME}/v1/submissions/create"
 console "\nSubmitting Job\n"
 logMessage "Submit job command: ${cmd}\n"
 resultSubmit=$(eval "${cmd}")
@@ -1058,7 +1061,7 @@ do
 done
 
 # -- Download stdout and stderr files -----------------------------------------
-
+logMessage=""
 if [ -n "${submissionId}" ]
 then
     LOCAL_STDOUT_FILENAME="stdout_${EXECUTION_TIMESTAMP}"
@@ -1069,6 +1072,8 @@ then
     if [ "$?" != 0 ]
     then
         console "Failed to download from ${stdout_server_path} to ${LOCAL_STDOUT_FILENAME}\n"
+    else
+        logMessage="View job's stdout log at ${LOCAL_STDOUT_FILENAME}\n"
     fi
 
     stderr_server_path="${SS_SPARK_WORK_DIR}/${submissionId}/stderr"
@@ -1076,6 +1081,8 @@ then
     if [ "$?" != 0 ]
     then
         console "Failed to download from ${stderr_server_path} to ${LOCAL_STDERR_FILENAME}\n"
+    else
+        logMessage="${logMessage}View job's stderr log at ${LOCAL_STDERR_FILENAME}\n" 
     fi
 fi
 
@@ -1094,9 +1101,12 @@ fi
 if [ "${IS_JOB_ERROR}" = "true" ]
 then
     console "\nERROR: Job failed.\n"
-    console "Log file: ${LOG_FILE}\n"
+    console "spark-submit log file: ${LOG_FILE}\n"
+    console "${logMessage}"
+    exit 1
 else
     endScript
+    console "${logMessage}"
 fi
 
 # -- --------------------------------------------------------------------------
