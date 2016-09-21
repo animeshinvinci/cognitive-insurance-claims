@@ -1,0 +1,30 @@
+extends ../node_modules/jade-bootstrap/layouts/starter
+append styles
+  link(href='../css/sticky-footer.css', rel='stylesheet')
+
+block body
+  +navbar-fixed("Cognitive Claims","navbar","inverse")
+    +nav_item("/","active") Home
+    +nav_item("/testModel") Test Model
+    +nav_item("#") Contact
+  .container
+    .starter-template
+      h1 Machine Learning Model Comparison
+      br
+    .row
+      .col-lg-6
+        +panel-info("Requested Prediction")
+          p Credit Score: #{request.creditScore}
+          p Approved Amount: $#{request.amount}
+          p Estimate Amount: $#{request.estimate}
+      .col-lg-6
+        +panel-info("Prediction Result")
+          p Rejection probability is: #{prediction.falseProb*100}%
+          p Approved probability is: #{prediction.trueProb*100}%
+          p
+            b Prediction is: #{prediction.prediction}
+  br
+  br
+  footer.footer
+    .container
+      p.text-muted IBM Cloud Integration CTO Office

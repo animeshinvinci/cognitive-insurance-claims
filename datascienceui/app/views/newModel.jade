@@ -4,8 +4,8 @@ append styles
 
 block body
 	+navbar-fixed("Cognitive Claims","navbar","inverse")
-		+nav_item("#","active") Home
-		+nav_item("#") About
+		+nav_item("/","active") Home
+		+nav_item("/testModel") Test Model
 		+nav_item("#") Contact
 	.container
 		.starter-template
@@ -14,11 +14,19 @@ block body
 		.row
 			.col-lg-6
 				+panel-info("Old Model")
-					p Current accuracy is: #{oldModel.accuracy}%
+					p Current model is
+						b  #{oldModel.accuracy.toFixed(2)}%
+						|  accurate
+					p Current model uses
+						b  #{oldModel.numClaims} claims
 					p !{oldModel.bestModel}
 			.col-lg-6
 				+panel-info("New Model")
-					p New accuracy is: #{newModel.accuracy}%
+					p New model is
+						b  #{newModel.accuracy.toFixed(2)}%
+						|  accurate
+					p New model uses
+						b  #{newModel.numClaims} claims
 					p !{newModel.bestModel}
 		p Select new model type
 		+dropdown("Machine Learning Model",[

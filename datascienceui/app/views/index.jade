@@ -4,8 +4,8 @@ append styles
 
 block body
 	+navbar-fixed("Cognitive Claims","navbar","inverse")
-		+nav_item("#","active") Home
-		+nav_item("#") About
+		+nav_item("/","active") Home
+		+nav_item("/testModel") Test Model
 		+nav_item("#") Contact
 	.container
 		.starter-template
@@ -14,7 +14,11 @@ block body
 			| Generate and compare various machine learning models.
 			br
 		+panel-primary("Current Model")
-			p Current accuracy is: #{model.accuracy}%
+			p Current model is
+				b  #{model.accuracy.toFixed(2)}%
+				|  accurate
+			p Current model uses
+				b  #{model.numClaims} claims
 			p !{model.bestModel}
 
 		h3 Generate a new model

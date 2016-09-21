@@ -1,0 +1,26 @@
+extends ../node_modules/jade-bootstrap/layouts/starter
+append styles
+  link(href='../css/sticky-footer.css', rel='stylesheet')
+
+block body
+  +navbar-fixed("Cognitive Claims","navbar","inverse")
+    +nav_item("/","active") Home
+    +nav_item("/testModel") Test Model
+    +nav_item("#") Contact
+  .container
+    .starter-template
+      h1 Machine Learning Model Test
+      br
+    .row
+      .col-lg-6
+        +panel-info("Test Data")
+          form(name="test-data", method="post", action="/predictionTestResult")
+            +input("text", id="creditScore", placeholder="820", label="Credit Score", name="creditScore")
+            +input("text", id="amount", placeholder="5000", label="Amount", name="amount")
+            +input("text", id="estimateAmount", placeholder="2300", label="Estimate", name="estimate")
+            +submit("Submit")
+  br
+  br
+  footer.footer
+    .container
+      p.text-muted IBM Cloud Integration CTO Office
