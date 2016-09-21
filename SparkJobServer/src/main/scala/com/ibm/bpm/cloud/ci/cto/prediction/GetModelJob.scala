@@ -20,6 +20,9 @@ class GetModelJob extends SparkJob with NamedObjectSupport {
   implicit def stringPersister[T]: NamedObjectPersister[NamedString] = new StringPersister
 
   override def runJob(sc: SparkContext, jobConfig: Config): Any = {
+    //Get number of claims used for a given model
+    val numClaims = this.namedObjects.get[NamedDouble]("model:claimsUsed").get.double
+
     val cvModel = Try(this.namedObjects.get[NamedModel]("model:claimModel").get.model.asInstanceOf[CrossValidatorModel])
       .getOrElse(this.namedObjects.get[NamedModel]("model:claimModel").get.model.asInstanceOf[PipelineModel])
     val modelType = this.namedObjects.get[NamedString]("model:modelType").get.string.asInstanceOf[String]
@@ -43,7 +46,7 @@ class GetModelJob extends SparkJob with NamedObjectSupport {
 
     //println("Best Model is: \n" + modelString)
     //modelString.to
-    var m: Map[String, Any] = Map("bestModel" -> modelString, "accuracy" -> accuracy * 100.0)
+    var m: Map[String, Any] = Map("bestModel" -> modelString, "accuracy" -> accuracy * 100.0, "numClaims" -> numClaims)
     (m)
   }
 

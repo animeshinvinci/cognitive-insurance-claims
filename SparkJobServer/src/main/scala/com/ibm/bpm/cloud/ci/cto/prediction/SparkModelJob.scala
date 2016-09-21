@@ -93,6 +93,8 @@ object SparkModelJob extends SparkJob with NamedObjectSupport {
       case _ => modelString += cvModel.asInstanceOf[CrossValidatorModel].bestModel.asInstanceOf[PipelineModel].stages(2).explainParams().replaceAll("\\n", "<br>")
     }
     println("Best Model is: \n" + modelString)
+    //Save number of claims used for this model into memory.
+    this.namedObjects.update("model:claimsUsed", NamedDouble(eventTable.count(), sc, StorageLevel.MEMORY_ONLY))
     //modelString.to
     //var modelString = cvModel.bestModel.asInstanceOf[PipelineModel].stages(2).asInstanceOf[LogisticRegressionModel]
     var m: Map[String, Any] = Map("bestModel" -> modelString, "accuracy" -> cvAccuracy * 100.0, "numClaims" -> eventTable.count())
