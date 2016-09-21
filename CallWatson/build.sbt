@@ -12,17 +12,24 @@ resolvers += "Job Server Bintray" at "https://dl.bintray.com/spark-jobserver/mav
 resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
 val ivyLocal = Resolver.file("local", file(Path.userHome.absolutePath + "/.ivy2/local"))
 
-libraryDependencies += "com.ibm.watson.developer_cloud" % "java-sdk" % "3.0.1"
+libraryDependencies += "com.ibm.watson.developer_cloud" % "java-sdk" % "3.3.1"
 libraryDependencies += "commons-codec" % "commons-codec" % "1.10"
 libraryDependencies += "commons-io" % "commons-io" % "2.5"
+libraryDependencies += "biz.paluch.redis" % "lettuce" % "3.4.3.Final"
 
 
 transitiveClassifiers := Seq("sources", "javadoc")
 
 libraryDependencies ++= Seq(
-  "com.ibm.watson.developer_cloud" % "java-sdk" % "3.0.1", 
-  "commons-io" % "commons-io" % "2.5" 
+  "com.ibm.watson.developer_cloud" % "java-sdk" % "3.3.1", 
+  "commons-io" % "commons-io" % "2.5",
+  "biz.paluch.redis" % "lettuce" % "3.4.3.Final"
 )
 
-
+assemblyMergeStrategy in assembly := {
+  case "META-INF/io.netty.versions.properties" => MergeStrategy.first
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
 

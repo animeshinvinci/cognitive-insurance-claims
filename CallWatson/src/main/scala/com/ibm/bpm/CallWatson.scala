@@ -17,9 +17,13 @@ import com.ibm.watson.developer_cloud.alchemy.v1.AlchemyLanguage
 import com.ibm.watson.developer_cloud.util.GsonSingleton
 import com.ibm.watson.developer_cloud.visual_recognition.v3.VisualRecognition
 import com.ibm.watson.developer_cloud.visual_recognition.v3.model.ClassifyImagesOptions
+import com.lambdaworks.redis.RedisClient
+import scala.util.Try
+import java.io.FileInputStream
+import com.lambdaworks.redis.RedisException
 
 class CallWatson {
-  val watson = new VisualRecognition(VisualRecognition.VERSION_DATE_2016_05_19)
+  val watson = new VisualRecognition(VisualRecognition.VERSION_DATE_2016_05_20)
   val PREFIX = "stream2file"
 
   val SUFFIX = ".png" //must be either png or jpg for Watson image service to work.
@@ -39,11 +43,17 @@ class CallWatson {
     println("BU: Saving image to temp file.")
     val tmpFile = stream2file(imageStream)
     println("BU: received file.  building up options")
+
+    //rtclauss 9/19/2016 - Add Redis Caching
+    checkRedisCache(tmpFile)
+  }
+
+  def callWatsonImageRecognition(file: File): String = {
     //Add default classifiers to work around a bug in 3.0.1 of Watson Client
     val classifiers = new ArrayList[String]()
     classifiers.add("default")
     val options = new ClassifyImagesOptions.Builder()
-      .images(tmpFile)
+      .images(file)
       .classifierIds(classifiers)
       .build()
     println("BU: done building. calling watson")
@@ -71,11 +81,14 @@ class CallWatson {
     println("BU: taxonomies retrieved " + taxonomies)
     var label = ""
     var confident = false
+    var confidenceScore = 0.0
     if (taxonomies.getTaxonomy.size() > 0) {
       taxonomies.getTaxonomy.foreach { x =>
-        if (x.getConfident) {
+        if (x.getConfident && x.getScore > confidenceScore) {
           label = x.getLabel()
+          confidenceScore = x.getScore
           confident = true
+          println("BU: we're confident " + x.getLabel + " is the label with score of " + x.getScore)
         }
       }
       if (!confident) {
@@ -89,6 +102,42 @@ class CallWatson {
     }
     println("BU: determined label -> " + label)
     label
+  }
+
+  def checkRedisCache(file: File): String = {
+    println("entered checkRedisCache")
+    var recognition = ""
+    println("BU: connecting to redis")
+    try {
+      val redisClient = RedisClient.create("redis://x:DQJIQGKUYGBCNKTN@sl-us-dal-9-portal.1.dblayer.com:15146")
+      println("BU: redis client created, connecting")
+      val redisConnection = redisClient.connect
+      println("BU: connection to Redis on Compose successful.  getting cached value")
+      val fis = new FileInputStream(file)
+      val fileSha1 = org.apache.commons.codec.digest.DigestUtils.sha1Hex(fis)
+      fis.close()
+
+      val cachedValue = redisConnection.get(fileSha1)
+      println("BU: cachedValue " + cachedValue)
+      if (cachedValue == null) {
+        println("BU: image not cached in redis, calling Watson")
+        recognition = callWatsonImageRecognition(file)
+        redisConnection.set(fileSha1, recognition)
+        println("BU: result from Watson " + recognition)
+      } else {
+        recognition = Try(cachedValue.toString).getOrElse("")
+      }
+      println("shutting everything down and returning")
+      redisConnection.close()
+      redisClient.shutdown()
+    } catch {
+      case e: RedisException => {
+        println("BU:  Error calling Redis by Compose.  Going direct to Watson.")
+        recognition = callWatsonImageRecognition(file)
+        println("BU: result from Watson" + recognition)
+      }
+    }
+    return recognition
   }
 
   def stream2file(in: InputStream): File = {
